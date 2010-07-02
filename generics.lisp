@@ -45,9 +45,10 @@ STREAM."))
 
 ;;; writing
 
-(defgeneric create-entry-from-pathname (archive pathname)
-  (:documentation "Create an ENTRY that can be written to ARCHIVE, using
-metadata and the name of FILENAME."))
+(defgeneric create-entry-from-pathname (archive pathname &key entry-name)
+  (:documentation "Create an ENTRY that can be written to ARCHIVE,
+using metadata of PATHNAME.  If ENTRY-NAME is specified, it overrides
+the name that is put into the archive for the file."))
 
 (defgeneric write-entry-to-archive (archive entry
                                             &key stream)

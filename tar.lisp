@@ -261,16 +261,18 @@
         do (return-from typeflag-for-mode typeflag)
         finally (error "No typeflag found for mode ~A" mode)))
 
-(defmethod create-entry-from-pathname ((archive tar-archive) pathname)
-  (let ((namestring (namestring pathname)))
+(defmethod create-entry-from-pathname ((archive tar-archive) pathname &key entry-name)
+  (let ((entry-name (or entry-name
+                        (namestring pathname))))
     ;; FIXME: figure out how to properly use the prefix field so we can
     ;; ditch this check.
-    (when (> (length namestring) (1- +tar-header-%name-length+))
+    (when (> (length entry-name) (1- +tar-header-%name-length+))
       (error "~A has too many characters in it." pathname))
     (let ((stat (stat pathname)))
       (make-instance 'tar-entry
+                     :pathname pathname
                      :%name (funcall *string-to-bytevec-conversion-function*
-                                     namestring)
+                                     entry-name)
                      :mode (logand +permissions-mask+
                                    (stat-mode stat))
                      :typeflag (typeflag-for-mode (stat-mode stat))

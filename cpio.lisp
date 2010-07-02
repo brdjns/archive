@@ -68,12 +68,13 @@
 (defmethod entry-fifo-p ((entry cpio-entry))
   (isfifo (mode entry)))
 
-(defmethod create-entry-from-pathname ((archive svr4-cpio-archive) pathname)
-  (let ((namestring (namestring pathname))
+(defmethod create-entry-from-pathname ((archive svr4-cpio-archive) pathname &key entry-name)
+  (let ((entry-name (or entry-name (namestring pathname)))
         (stat (stat pathname)))
     ;; FIXME: should fill in other fields at some later point (e.g. CRC)
     (make-instance 'svr4-cpio-entry
-                   :name namestring
+                   :pathname pathname
+                   :name entry-name
                    :mode (stat-mode stat)
                    :ino (stat-ino stat)
                    :nlink (stat-nlink stat)
@@ -81,14 +82,15 @@
                    :gid (stat-gid stat)
                    :mtime (stat-mtime stat)
                    :filesize (stat-size stat)
-                   :namesize (length namestring))))
+                   :namesize (length entry-name))))
 
-(defmethod create-entry-from-pathname ((archive odc-cpio-archive) pathname)
-  (let ((namestring (namestring pathname))
+(defmethod create-entry-from-pathname ((archive odc-cpio-archive) pathname &key entry-name)
+  (let ((entry-name (or entry-name (namestring pathname)))
         (stat (stat pathname)))
     ;; FIXME: should fill in other fields at some later point
     (make-instance 'odc-cpio-entry
-                   :name namestring
+                   :pathname pathname
+                   :name entry-name
                    :mode (stat-mode stat)
                    :inode (stat-ino stat)
                    :nlink (stat-nlink stat)
@@ -96,7 +98,7 @@
                    :gid (stat-gid stat)
                    :mtime (stat-mtime stat)
                    :filesize (stat-size stat)
-                   :namesize (length namestring))))
+                   :namesize (length entry-name))))
 
 ;;; FIXME: need to read the actual filenames from the archive as well.
 (defmethod read-entry-from-archive ((archive odc-cpio-archive))

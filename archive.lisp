@@ -90,7 +90,7 @@ requirements about alignment."
     ;; write any associated data
     (cond
       ((eq t stream)
-       (with-open-file (filestream (name entry) :direction :input
+       (with-open-file (filestream (entry-pathname entry) :direction :input
                                    :element-type '(unsigned-byte 8)
                                    :if-does-not-exist :error)
          (transfer-stream-to-archive archive filestream)))
