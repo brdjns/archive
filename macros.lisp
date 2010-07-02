@@ -3,9 +3,9 @@
 (in-package :archive)
 
 (defun extractor-function-name (entry-name field-name)
-  (intern (format nil "~A-READ-~A-FROM-BUFFER" entry-name field-name)))
+  (intern (format nil "~A-~A-~A-~A" entry-name '#:read field-name '#:from-buffer)))
 (defun injector-function-name (entry-name field-name)
-  (intern (format nil "~A-WRITE-~A-TO-BUFFER" entry-name field-name)))
+  (intern (format nil "~A-~A-~A-~A" entry-name '#:write field-name '#:to-buffer)))
 
 (defmacro with-extracted-fields ((entry-class buffer offset &rest fields)
                                  &body body)
@@ -60,14 +60,14 @@
 (defmacro define-octet-header (class-name &rest field-defs)
   (let ((offset 0))                     ; could be integrated in the LOOP?
     (flet ((offset-constant-symbol (name)
-             (intern (format nil "+~A-~A-OFFSET+" class-name
-                             (string-upcase (symbol-name name)))))
+             (intern (format nil "+~A-~A-~A+" class-name
+                             (symbol-name name) '#:offset)))
            (length-constant-symbol (name)
-             (intern (format nil "+~A-~A-LENGTH+" class-name
-                             (string-upcase (symbol-name name)))))
+             (intern (format nil "+~A-~A-~A+" class-name
+                             (symbol-name name) '#:length)))
            (keywordify-name (name)
-             (intern (string-upcase (symbol-name name))
-                     (find-package "KEYWORD"))))
+             (intern (symbol-name name)
+                     (find-package '#:keyword))))
       (loop for (name length kind) in field-defs
             collect `(defconstant ,(offset-constant-symbol name)
                       ,offset) into constant-defs
@@ -117,7 +117,7 @@
                         ,@constant-defs
                         ,@reader-defs
                         ,@writer-defs
-                        (defconstant ,(intern (format nil "+~A-LENGTH+" class-name)) ,offset)
+                        (defconstant ,(intern (format nil "+~A-~A+" class-name '#:length)) ,offset)
                         (defclass ,class-name ()
                           ,slot-definitions
                           (:default-initargs ,@default-initargs))))))))

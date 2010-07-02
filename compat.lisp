@@ -103,7 +103,12 @@
                              :atime atime :mtime mtime :ctime ctime
                              :size size :blocks blocks :blksize blksize
                              :flags flags :gen gen))
-    #-(or sbcl lispworks clisp cmucl) (error "Not implemented")))
+    #+allegro
+    (etypecase file
+      (stream (excl.osi:fstat file))
+      (string (excl.osi:stat file))
+      (pathname (excl.osi:stat (namestring file))))
+    #-(or sbcl lispworks clisp cmucl allegro) (error "Not implemented")))
 
 
 ;;; messing with stat modes
@@ -135,46 +140,53 @@
   #+lispworks (file-stat-mode stat)
   #+clisp (posix:convert-mode (posix:file-stat-mode stat))
   #+cmucl (mode stat)
-  #-(or sbcl lispworks clisp cmucl) (error "Not implemented"))
+  #+allegro (excl.osi:stat-mode stat)
+  #-(or sbcl lispworks clisp cmucl allegro) (error "Not implemented"))
 
 (defun stat-uid (stat)
   #+sbcl (sb-posix::stat-uid stat)
   #+lispworks (file-stat-owner-id stat)
   #+clisp (posix:file-stat-uid stat)
   #+cmucl (uid stat)
-  #-(or sbcl lispworks clisp cmucl) (error "Not implemented"))
+  #+allegro (excl.osi:stat-uid stat)
+  #-(or sbcl lispworks clisp cmucl allegro) (error "Not implemented"))
 
 (defun stat-gid (stat)
   #+sbcl (sb-posix::stat-gid stat)
   #+lispworks (file-stat-group-id stat)
   #+clisp (posix:file-stat-gid stat)
   #+cmucl (gid stat)
-  #-(or sbcl lispworks clisp cmucl) (error "Not implemented"))
+  #+allegro (excl.osi:stat-gid stat)
+  #-(or sbcl lispworks clisp cmucl allegro) (error "Not implemented"))
 
 (defun stat-size (stat)
   #+sbcl (sb-posix::stat-size stat)
   #+lispworks (file-stat-size stat)
   #+clisp (posix:file-stat-size stat)
   #+cmucl (size stat)
-  #-(or sbcl lispworks clisp cmucl) (error "Not implemented"))
+  #+allegro (excl.osi:stat-size stat)
+  #-(or sbcl lispworks clisp cmucl allegro) (error "Not implemented"))
 
 (defun stat-mtime (stat)
   #+sbcl (sb-posix::stat-mtime stat)
   #+lispworks (file-stat-last-modify stat)
   #+clisp (posix:file-stat-mtime stat)
   #+cmucl (mtime state)
-  #-(or sbcl lispworks clisp cmucl) (error "Not implemented"))
+  #+allegro (- (excl.osi:stat-mtime stat) 2208988800) ; adjust universal time to unix epch time
+  #-(or sbcl lispworks clisp cmucl allegro) (error "Not implemented"))
 
 (defun stat-ino (stat)
   #+sbcl (sb-posix::stat-ino stat)
   #+lispworks (file-stat-inode stat)
   #+clisp (posix:file-stat-ino stat)
   #+cmucl (ino stat)
-  #-(or sbcl lispworks clisp cmucl) (error "Not implemented"))
+  #+allegro (excl.osi:stat-ino stat)
+  #-(or sbcl lispworks clisp cmucl allegro) (error "Not implemented"))
 
 (defun stat-nlink (stat)
   #+sbcl (sb-posix::stat-nlink stat)
   #+lispworks (file-stat-links stat)
   #+clisp (posix:file-stat-nlink stat)
   #+cmucl (nlink stat)
-  #-(or sbcl lispworks clisp cmucl) (error "Not implemented"))
+  #+allegro (excl.osi:stat-nlink stat)
+  #-(or sbcl lispworks clisp cmucl allegro) (error "Not implemented"))

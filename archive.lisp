@@ -15,7 +15,7 @@
    (stream :initarg :stream :reader archive-stream :type stream)))
 
 ;; Enable nifty trick of skipping archive data rather than reading it.
-#+(or sbcl cmucl (and lispworks unix))
+#+(or sbcl cmucl (and lispworks unix) allegro)
 (defmethod initialize-instance :after ((instance archive) &rest initargs)
   (declare (ignore initargs))
   (let ((stream (archive-stream instance)))
@@ -23,7 +23,8 @@
     (when (typep stream 'file-stream)
       (let ((stat (stat #+sbcl (sb-impl::fd-stream-fd stream)
                         #+cmucl (system::stream-fd stream)
-                        #+(and lispworks unix) (stream::os-file-handle-stream-file-handle stream))))
+                        #+(and lispworks unix) (stream::os-file-handle-stream-file-handle stream)
+                        #+allegro stream)))
         (when (and stat (isreg (stat-mode stat)))
           (setf (skippable-p instance) t))))))
 
@@ -76,7 +77,7 @@ requirements about alignment."
 
 (defmethod write-entry-to-archive :before ((archive archive) entry
                                            &key stream)
-  (declare (ignore stream))
+  (declare (ignore stream entry))
   (unless (eq (%archive-direction archive) :output)
     (error "Attempting to write to a non-output archive")))
 
@@ -141,8 +142,8 @@ requirements about alignment."
                                        (- (size entry) n-bytes-remaining))))
     (tagbody
        (unless (and (skippable-p archive) (null stream))
-         (go :READ-DATA-THROUGH))
-     :ATTEMPT-TO-SKIP
+         (go :read-data-through))
+     ;; :attempt-to-skip
        (let ((current-position (file-position (archive-stream archive))))
          (when current-position
            (let ((new-position (file-position (archive-stream archive)
@@ -150,10 +151,10 @@ requirements about alignment."
                                                  rounded-n-bytes-remaining))))
              (when new-position
                (setf rounded-n-bytes-remaining 0)
-               (go :CLEANUP)))))
-     :SKIP-FAILED
+               (go :cleanup)))))
+     ;; :skip-failed
        (setf (skippable-p archive) nil)
-     :READ-DATA-THROUGH
+     :read-data-through
        (loop with archive-stream = (archive-stream archive)
           with buffer = (file-buffer archive)
           for bytes-read = (read-sequence buffer archive-stream
@@ -168,7 +169,7 @@ requirements about alignment."
                             :end (min n-bytes-remaining bytes-read)))
           (decf n-bytes-remaining bytes-read)
           while (plusp rounded-n-bytes-remaining))
-     :CLEANUP
+     :cleanup
        ;; make sure we didn't overrun the data of the entry
        (assert (zerop rounded-n-bytes-remaining))
        ;; make sure nobody can read from the entry's stream

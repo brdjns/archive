@@ -369,6 +369,7 @@
              ;; "comment=<sha1>".  So just ignore them for now.
              (let ((global-header (read-data-block archive (size entry)
                                                    #'round-up-to-tar-block)))
+               (declare (ignore global-header))
                (read-entry-from-archive archive)))
             ((= (typeflag entry) +gnutar-sparse+)
              (error "Don't understand GNU tar sparse entry"))
