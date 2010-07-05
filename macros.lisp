@@ -168,3 +168,5 @@ an ARCHIVE-ENTRY representing the entry.  RESULT is used as in DOTIMES."
           ((null ,entry) ,result)
         ,@body
         (discard-entry ,archive-var ,entry)))))
+
+(defconstant +universal-time-offset+ 2208988800)

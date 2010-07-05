@@ -172,7 +172,7 @@
   #+lispworks (file-stat-last-modify stat)
   #+clisp (posix:file-stat-mtime stat)
   #+cmucl (mtime state)
-  #+allegro (- (excl.osi:stat-mtime stat) 2208988800) ; adjust universal time to unix epch time
+  #+allegro (- (excl.osi:stat-mtime stat) +universal-time-offset+) ; adjust universal time to unix epoch time
   #-(or sbcl lispworks clisp cmucl allegro) (error "Not implemented"))
 
 (defun stat-ino (stat)

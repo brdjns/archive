@@ -56,7 +56,7 @@ the name that is put into the archive for the file."))
                                             &key stream)
   (:documentation "Write ENTRY to ARCHIVE.  Data associated with ENTRY
 is written to ARCHIVE according to the :STREAM argument.  If :STREAM is
-T, the expression (NAME ENTRY) is expected to refer to an existing file
+T, the expression (PATHNAME ENTRY) is expected to refer to an existing file
 from which data may be read.  If :STREAM is a stream, then data is read
 from that strema and written to ARCHIVE.  If :STREAM is NIL, then no
 entry data is written."))

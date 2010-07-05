@@ -281,6 +281,67 @@
                      :size (stat-size stat)
                      :mtime (stat-mtime stat)))))
 
+(defmethod add-entry ((archive tar-archive)
+                      entry-name
+                      contents
+                      &rest args
+                      &key (mode +permissions-mask+ mode-present-p)
+                           (typeflag +tar-regular-file+ typeflag-present-p)
+                           (uid 0 uid-present-p)
+                           (gid 0 gid-present-p)
+                           (mtime (- (get-universal-time) +universal-time-offset+) mtime-present-p))
+  (let (entry)
+    (flet
+        ((make-entry (&rest args-from-pathname &key &allow-other-keys)
+           (setf entry (apply #'make-instance
+                              'tar-entry
+                              :%name (funcall *string-to-bytevec-conversion-function* entry-name)
+                              ;; This is not pretty: We want to be
+                              ;; able to have the caller specify any
+                              ;; of mode/typeflag/uid/gid/mtime, fall
+                              ;; back to what the real file has for
+                              ;; these attribute (if a file is
+                              ;; written) and then default to the
+                              ;; defaults provided in this functions'
+                              ;; header.
+                              (append args
+                                      (and mode-present-p (list :mode mode))
+                                      (and typeflag-present-p (list :typeflag typeflag))
+                                      (and uid-present-p (list :uid uid))
+                                      (and gid-present-p (list :gid gid))
+                                      (and mtime-present-p (list :mtime mtime))
+                                      args-from-pathname
+                                      (list :mode mode
+                                            :typeflag typeflag
+                                            :uid uid
+                                            :gid gid
+                                            :mtime mtime)))))
+         (write-entry (stream)
+           (setf (slot-value entry 'size)
+                 (or (file-length stream)
+                     (error "cannot determine contents size of stream ~A for archive entry creation" stream)))
+           (write-entry-to-archive archive entry :stream stream)))
+      (etypecase contents
+        #+allegro
+        (string
+         (make-entry)
+         (let ((buffer (funcall *string-to-bytevec-conversion-function* contents)))
+           (excl:with-input-from-buffer (stream buffer)
+             (write-entry stream))))
+        (stream
+         (make-entry)
+         (write-entry contents))
+        (pathname
+         (let ((stat (stat contents)))
+           (make-entry :mode (logand +permissions-mask+
+                                     (stat-mode stat))
+                       :typeflag (typeflag-for-mode (stat-mode stat))
+                       :uid (stat-uid stat)
+                       :gid (stat-gid stat)
+                       :mtime (stat-mtime stat)))
+         (with-open-file (stream contents :element-type '(unsigned-byte 8))
+           (write-entry stream)))))))
+
 (defmethod write-entry-to-buffer ((entry tar-entry) buffer &optional (start 0))
   (declare (type (simple-array (unsigned-byte 8) (*)) buffer))
   ;; ensure a clean slate
@@ -447,9 +508,9 @@
                       :end (- bytes-remaining))
       (values))))
 
-(defun create-tar-file (pathname filelist)
+(defun create-tar-file (pathname)
   (with-open-archive (archive pathname :direction :output
                               :if-exists :supersede)
-    (dolist (file filelist (finalize-archive archive))
-      (let ((entry (create-entry-from-pathname archive file)))
-        (write-entry-to-archive archive entry)))))
+    (add-entry archive "hello" "text from string")
+    (add-entry archive "passwd" #P"/etc/passwd")
+    (finalize-archive archive)))
