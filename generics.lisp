@@ -29,10 +29,12 @@
   (:documentation "Return the next entry in ARCHIVE or NIL if there is no
 next entry"))
 
-(defgeneric extract-entry (archive entry)
-  (:documentation "Recreate the file represented by ENTRY in ARCHIVE as
-an actual file on disk.  This file is created relative to
-*DEFAULT-PATHNAME-DEFAULTS*"))
+(defgeneric extract-entry (archive entry &key pathname)
+  (:documentation "Recreate the file represented by ENTRY in ARCHIVE
+as an actual file on disk.  PATHNAME can be specified to override the
+filename as stored in the archive.  If the chosen pathname is
+relative, the file is created relative to
+*DEFAULT-PATHNAME-DEFAULTS*."))
 
 (defgeneric discard-entry (archive entry)
   (:documentation "Advance ARCHIVE's internal state past the end of

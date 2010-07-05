@@ -90,7 +90,8 @@ requirements about alignment."
     ;; write any associated data
     (cond
       ((eq t stream)
-       (with-open-file (filestream (entry-pathname entry) :direction :input
+       (with-open-file (filestream (entry-pathname entry)
+                                   :direction :input
                                    :element-type '(unsigned-byte 8)
                                    :if-does-not-exist :error)
          (transfer-stream-to-archive archive filestream)))
@@ -187,3 +188,7 @@ requirements about alignment."
 (defun extract-files-from-pathname (pathname &optional (filter (constantly t)))
   (with-open-archive (archive pathname :direction :input)
     (extract-files-from-archive archive filter)))
+
+(defmethod initialize-instance :after ((entry archive-entry) &key)
+  (unless (entry-pathname entry)
+    (setf (entry-pathname entry) (pathname (name entry)))))

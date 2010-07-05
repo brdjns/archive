@@ -380,15 +380,15 @@
             
 ;;; FIXME: must add permissions handling, mtime, etc.  maybe those should
 ;;; be specified by flags or somesuch?
-(defmethod extract-entry ((archive tar-archive) (entry tar-entry))
-  ;; FIXME: this is potentially bogus
-  (let ((name (merge-pathnames (name entry) *default-pathname-defaults*)))
+(defmethod extract-entry ((archive tar-archive) (entry tar-entry) &key pathname)
+  (let ((pathname (or pathname (entry-pathname entry))))
     (cond
       ((= (typeflag entry) +tar-directory-file+)
-       (ensure-directories-exist name))
+       (ensure-directories-exist pathname))
       ((= (typeflag entry) +tar-regular-file+)
-       (ensure-directories-exist name)
-       (with-open-file (stream name :direction :output
+       (ensure-directories-exist pathname)
+       (with-open-file (stream pathname
+                               :direction :output
                                :if-exists :supersede
                                :element-type '(unsigned-byte 8))
          (transfer-entry-data-to-stream archive entry stream)))
