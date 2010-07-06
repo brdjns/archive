@@ -71,5 +71,30 @@
   ;; not part of the tar format, but it makes defined constants come out right
   (%%padding 12 :string))
 
+;;; definition taken from http://www.gnu.org/software/tar/manual/html_section/Sparse-Formats.html
+(define-octet-header sparse-file-header
+    (%%padding-1 345 :string)
+  (atime 12 :octnum)
+  (ctime 12 :octnum)
+  (offset 12 :octnum)
+  (%%padding-2 5 :octnum)
+  (sp 96 :string)
+  (isextended 1 :byte)
+  (realsize 12 :octnum))
+
+(define-octet-header sparse-entry
+    (offset 12 :octnum)
+  (size 12 :octnum))
+
+(define-octet-header sparse-extension-header
+    (sp 504 :string)
+  (isextended 1 :byte))
+
 (defclass tar-entry (archive-entry tar-header)
   ())
+
+(defclass sparse-tar-entry (tar-entry)
+  ((sparse-descriptors :initarg :sparse-descriptors
+                       :reader sparse-descriptors)
+   (file-size :initarg :file-size
+              :reader file-size)))

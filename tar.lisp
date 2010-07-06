@@ -435,9 +435,71 @@
                (declare (ignore global-header))
                (read-entry-from-archive archive)))
             ((= (typeflag entry) +gnutar-sparse+)
-             (error "Don't understand GNU tar sparse entry"))
+             (let (sparse-descriptors)
+               (with-extracted-fields (sparse-file-header entry-block 0
+                                                          sp isextended realsize)
+                 (flet
+                     ((interpret-entry (offset size)
+                        (if (zerop size)
+                            (when (plusp offset)
+                              (assert (= offset realsize)))
+                            (push (cons offset size) sparse-descriptors))))
+                   (dotimes (i 4)
+                     (with-extracted-fields (sparse-entry sp (* i 24)
+                                                          offset size)
+                       (interpret-entry offset size)))
+                   (when (plusp isextended)
+                     (loop
+                        (let ((extension-block (read-data-block archive +sparse-extension-header-length+ #'round-up-to-tar-block)))
+                          (with-extracted-fields (sparse-extension-header extension-block 0
+                                                                          sp isextended)
+                            (dotimes (i 21)
+                              (with-extracted-fields (sparse-entry sp (* i 24)
+                                                                   offset size)
+                                (interpret-entry offset size)))
+                            (unless (plusp isextended)
+                              (return))))))
+                   (change-class entry 'sparse-tar-entry
+                                 :sparse-descriptors (nreverse sparse-descriptors)
+                                 :file-size realsize)))))
             (t
              (error "Can't understand typeflag: ~A" (typeflag entry))))))))
+
+(defun extract-sparse-entry (archive entry pathname)
+  (with-open-file (out pathname
+                       :direction :output
+                       :if-exists :supersede
+                       :element-type '(unsigned-byte 8))
+    (dolist (sparse-descriptor (sparse-descriptors entry))
+      (excl.osi:os-ftruncate out (file-size entry))
+      (destructuring-bind (offset . size) sparse-descriptor
+        (format t "extracting ~A bytes to offset ~A~%" size offset)
+        (file-position out offset)
+        (let* ((n-bytes-remaining size)
+               (rounded-n-bytes-remaining (round-up-to-tar-block size))
+               (archive-stream (archive-stream archive))
+               (buffer (file-buffer archive)))
+          (loop
+             (let ((bytes-read (read-sequence buffer archive-stream
+                                              :start 0
+                                              :end (min (length buffer)
+                                                        rounded-n-bytes-remaining))))
+               (assert (plusp bytes-read))
+               (assert (not (minusp n-bytes-remaining)))
+               (decf rounded-n-bytes-remaining bytes-read)
+               (write-sequence buffer out
+                               :start 0
+                               :end (min n-bytes-remaining bytes-read))
+               (decf n-bytes-remaining bytes-read))
+             (unless (plusp rounded-n-bytes-remaining)
+               (return))))))
+    ;; truncate file again to make sure that original size is
+    ;; matched even if more data has been written due to blocking
+    (excl.osi:os-ftruncate out (file-size entry)))
+  ;; indicate that we've already discarded the data
+  (setf (n-bytes-remaining (slot-value entry 'stream)) 0)
+  (setf (data-discarded-p entry) t))
+  
             
 ;;; FIXME: must add permissions handling, mtime, etc.  maybe those should
 ;;; be specified by flags or somesuch?
@@ -453,6 +515,9 @@
                                :if-exists :supersede
                                :element-type '(unsigned-byte 8))
          (transfer-entry-data-to-stream archive entry stream)))
+      ((= (typeflag entry) +gnutar-sparse+)
+       (ensure-directories-exist pathname)
+       (extract-sparse-entry archive entry pathname))
       (t
        (error "Don't know how to extract a type ~A tar entry yet" 
               (typeflag entry))))))
